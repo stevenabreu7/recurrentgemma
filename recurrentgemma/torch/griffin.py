@@ -214,7 +214,7 @@ class Griffin(nn.Module):
     ):
         """enable attention head sparsification with specified k value, norm,
         and if it should be applied during prefill"""
-        self.set_sparse_attributes(k)
+        self.set_sparse_attributes(k, metric, prefill)
         # print(f"enabled sparsification with {k=}, {metric=}, {prefill=}")
 
     def disable_sparsification(self):
