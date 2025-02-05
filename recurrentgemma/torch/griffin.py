@@ -27,7 +27,7 @@ from torch import nn
 from torch.utils import checkpoint
 
 
-logger = logging.getlogger(__name__)
+# logger = logging.getlogger(__name__)
 Cache = dict[str, modules.ResidualBlockCache]
 
 
@@ -217,12 +217,12 @@ class Griffin(nn.Module):
         """enable attention head sparsification with specified k value, norm,
         and if it should be applied during prefill"""
         self.set_sparse_attributes(k)
-        logger.info(f"enabled sparsification with {k=}, {metric=}, {prefill=}")
+        # print(f"enabled sparsification with {k=}, {metric=}, {prefill=}")
 
     def disable_sparsification(self):
         """disable attention head sparsification"""
         self.set_topk_heads()
-        logger.info("disabled sparsification")
+        # print("disabled sparsification")
 
     def init_cache(
         self,
