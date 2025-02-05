@@ -54,10 +54,9 @@ def dejavu_intervention(
     k: int,
     metric="l2",
     do_prefill=False,
-    attn_mask=None,
     head_mask_recorder: AttentionRecorder = None,
 ):
-    print("in dejavu")
+    # print("in dejavu")
     num_heads = attn_weights.shape[1]
     metric_map = {
         "l2": lambda x: torch.norm(x, p=2, dim=-1),
@@ -65,7 +64,8 @@ def dejavu_intervention(
             x + 1e-12 * torch.log2(x + 1e-12), dim=-1
         ),
     }
-
+    print(f"probs shape: {attn_weights.shape}")
+    print(f"encode shape: {attn_output.shape}")
     if k == 0:
         return attn_output * 0.0
     if k > num_heads or k < 0:
@@ -78,7 +78,9 @@ def dejavu_intervention(
     out_len = attn_weights.shape[-2]
     if do_prefill or out_len == 1:
         metric_scores = metric_map[metric](attn_weights)
+        print(f"metric_scores: {metric_scores}")
         _, topk_ind = metric_scores.topk(k, dim=1)
+        print(f"{_}{topk_ind}")
 
         mask = torch.zeros_like(metric_scores, dtype=torch.bool)
         mask.scatter_(
@@ -86,7 +88,7 @@ def dejavu_intervention(
             index=topk_ind,
             src=torch.ones_like(topk_ind, dtype=torch.bool),
         )
-        print(f"topk_ind: {topk_ind}")
+        # print(f"topk_ind: {topk_ind}")
         attn_output = mask.unsqueeze(dim=-1) * attn_output
         if head_mask_recorder is not None:
             head_mask_recorder(topk_ind)
@@ -563,7 +565,7 @@ class LocalAttentionBlock(nn.Module):
                 do_prefill=self.sparsity_prefill,
                 head_mask_recorder=self.head_mask_recorder,
             )
-            print(f"did topk dejavu with k={self.topk_heads}")
+            # print(f"did topk dejavu with k={self.topk_heads}")
         encoded = einops.rearrange(
             encoded, "... n h -> ... (n h)", n=self.num_heads
         )

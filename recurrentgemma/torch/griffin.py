@@ -15,7 +15,7 @@
 """Griffin model."""
 from typing import Literal, overload, Dict, Optional, Tuple, Union
 
-import logging
+# import logging
 
 
 from recurrentgemma import common
