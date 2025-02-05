@@ -55,6 +55,7 @@ def dejavu_intervention(
     metric="l2",
     do_prefill=False,
     attn_mask=None,
+    head_mask_recorder: AttentionRecorder = None,
 ):
     num_heads = attn_weights.shape[1]
     metric_map = {
@@ -86,7 +87,8 @@ def dejavu_intervention(
         )
 
         attn_output = mask.unsqueeze(dim=-1) * attn_output
-
+        if head_mask_recorder is not None:
+            head_mask_recorder(topk_ind)
     return attn_output
 
 
