@@ -198,9 +198,9 @@ class Griffin(nn.Module):
         prefill: Optional[bool] = False,
     ):
         # update config, disables if no arguments passed
-        self.config.topk_heads = k
-        self.config.sparsity_metric = metric
-        self.config.sparsity_prefill = prefill
+        # self.config.topk_heads = k
+        # self.config.sparsity_metric = metric
+        # self.config.sparsity_prefill = prefill
 
         # update all attention layers
         for block in self.blocks:
