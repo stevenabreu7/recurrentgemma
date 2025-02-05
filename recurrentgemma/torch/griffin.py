@@ -204,9 +204,7 @@ class Griffin(nn.Module):
 
         # update all attention layers
         for block in self.blocks:
-            if isinstance(
-                block.temporal_block_type, common.TemporalBlockType.ATTENTION
-            ):
+            if block.temporal_block_type == common.TemporalBlockType.ATTENTION:
                 block.attention_block.topk_heads = k
                 block.attention_block.sparsity_metric = metric
                 block.attention_block.sparsity_prefill = prefill
