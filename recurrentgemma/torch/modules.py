@@ -60,7 +60,7 @@ def dejavu_intervention(
     num_heads = attn_weights.shape[1]
     metric_map = {
         "l2": lambda x: torch.norm(x, p=2, dim=-1),
-        "entropy": lambda x: -torch.sum(
+        "entropy": lambda x: torch.sum(
             (x + 1e-12) * torch.log2(x + 1e-12), dim=-1
         ),
     }
