@@ -27,7 +27,7 @@ from torch import nn
 from torch.utils import checkpoint
 
 
-logger = logging.get_logger(__name__)
+logger = logging.getlogger(__name__)
 Cache = dict[str, modules.ResidualBlockCache]
 
 
