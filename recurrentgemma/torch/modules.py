@@ -392,7 +392,6 @@ class LocalAttentionBlock(nn.Module):
         self.num_heads = num_heads
         self.window_size = window_size
         self.final_w_init_variance_scale = final_w_init_variance_scale
-        self.head_dim = width // num_heads
 
         # Dejavu attributes
         self.topk_heads = None
