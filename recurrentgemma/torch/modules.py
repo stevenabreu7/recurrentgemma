@@ -557,7 +557,7 @@ class LocalAttentionBlock(nn.Module):
         probs = nn.functional.softmax(masked_logits, dim=-1).type_as(x)
         encoded = einops.einsum(probs, values, "b n t s, b s n h -> b t n h")
         if self.topk_heads is not None:
-            attn_output = dejavu_intervention(
+            encode = dejavu_intervention(
                 probs,
                 encoded,
                 k=self.topk_heads,
