@@ -29,6 +29,64 @@ _MIN_LOGITS_VALUE = -2.3819763e38  # Set to a large negative number.
 _MAX_WAVELENGTH = 10_000
 
 
+def dejavu_intervention(attn_weights, attn_output, k: int, head_mask_recorder=None):
+    # attn_output: (N,...,Hq,L,Ev)
+    # attn_weights: (N,...,Hq,L,L), these are normed (softmax etc.)
+    # B: batch size
+    # H: number of attention heads
+    # Lg: length of the generated sequence (out_len)
+    # Lh: length of the input sequence (max context window)
+    # attn_weights: (B, H, Lg, Lh)
+    num_heads = attn_weights.shape[1]
+
+    if k == 0:
+        # zero out all heads -> remove MHA completely
+        return attn_output * 0.0
+
+    if k > num_heads or k < 0:
+        raise ValueError(f"k ({k}) cannot exceed number of attention heads ({num_heads})")
+
+    if k == num_heads:
+        # keep all heads
+        return attn_output
+
+    # NOTE: now we apply it in prefill *and* generation
+    # out_len = attn_weights.shape[-2]
+    # if out_len == 1:
+
+    # Calculate L2 norm on attention outputs, across Lg dim
+    l2_norm = torch.norm(attn_weights, p=2, dim=-1)
+    # l2_norm: (B, H, Lg)
+
+    # get topk indices, along head dim
+    _, topk_ind = l2_norm.topk(k, dim=1)
+    # topk_ind: (B, k, Lg)
+
+    # build a mask of shape (B, H, Lg)
+    mask = torch.zeros_like(l2_norm, dtype=torch.bool)
+    mask.scatter_(dim=1, index=topk_ind, src=torch.ones_like(topk_ind, dtype=torch.bool))
+    # mask: (B, H, Lg)
+
+    # (Optional) assert check
+    unique_vals = mask.sum(dim=1).unique()
+    k_tensor = torch.tensor([k], device=unique_vals.device)
+    assert torch.equal(unique_vals, k_tensor), "Mask doesn't have exactly k heads active per sample"
+
+    # zero out everything except the topk heads
+    attn_output = mask.unsqueeze(dim=-1) * attn_output
+    # attn_output: (B, H, Lg, Lh) --- sparse with only k out of H heads active
+
+    # (Optional) assert check
+    unique_vals_output = ((attn_output.sum(dim=-1).abs() > 0).sum(dim=1)).unique()
+    k_tensor = torch.tensor([k], device=unique_vals_output.device)
+    assert torch.equal(unique_vals_output, k_tensor), "Not exactly k heads remaining in output"
+
+    if head_mask_recorder is not None:
+        head_mask_recorder(topk_ind)
+
+    return attn_output
+
+
 @at.typed
 class RecurrentBlockCache(NamedTuple):
   """The cache for a recurrent block."""
@@ -472,6 +530,16 @@ class LocalAttentionBlock(nn.Module):
         encoded, "... n h -> ... (n h)", n=self.num_heads
     )
     attn_output = self.proj_final(encoded)
+    # probs: attention weights
+    # attn_output: attention output
+    topk_heads = None
+    if topk_heads is not None:
+      attn_output = dejavu_intervention(
+        attention_weights,
+        attn_output, 
+        k=topk_heads,
+        head_mask_recorder=None,
+      ) 
 
     return attn_output, new_cache
 
