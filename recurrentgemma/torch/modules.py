@@ -56,7 +56,12 @@ def dejavu_intervention(
     do_prefill=False,
     head_mask_recorder: AttentionRecorder = None,
 ):
-    # print("in dejavu")
+    # print(f"\nDejavu Input Shapes:")
+    # print(f"attn_weights shape: {attn_weights.shape}")
+    # print(f"attn_output shape: {attn_output.shape}")
+    # print(f"k value: {k}")
+    # print(f"do_prefill: {do_prefill}")
+
     num_heads = attn_weights.shape[1]
     metric_map = {
         "l2": lambda x: torch.norm(x, p=2, dim=-1),
@@ -64,34 +69,49 @@ def dejavu_intervention(
             (x + 1e-12) * torch.log2(x + 1e-12), dim=-1
         ),
     }
-    print(f"probs shape: {attn_weights.shape}")
-    print(f"encode shape: {attn_output.shape}")
-    if k == 0:
-        return attn_output * 0.0
-    if k > num_heads or k < 0:
-        raise ValueError(
-            f"k ({k}) cannot exceed number of attention heads ({num_heads})"
-        )
-    if k == num_heads:
-        return attn_output
 
     out_len = attn_weights.shape[-2]
+    # print(f"\nProcessing step:")
+    # print(f"out_len: {out_len}")
+    # print(f"Condition check: do_prefill={do_prefill} or out_len==1: {out_len==1}")
+
     if do_prefill or out_len == 1:
+        if k == 0:
+          # print("k=0 case: returning zero tensor")
+          return attn_output * 0.0
+    
+        if k > num_heads or k < 0:
+          # print(f"Invalid k value: k={k}, num_heads={num_heads}")
+          raise ValueError(
+            f"k ({k}) cannot exceed number of attention heads ({num_heads})"
+          )
         metric_scores = metric_map[metric](attn_weights)
-        print(f"metric_scores: {metric_scores}")
+        # print(f"\nMetric computation:")
+        # print(f"metric_scores shape: {metric_scores.shape}")
+        # print(f"metric_scores values: {metric_scores}")
+
         _, topk_ind = metric_scores.topk(k, dim=1)
-        print(f"{_}{topk_ind}")
+        # print(f"\nTop-k selection:")
+        # print(f"topk_ind shape: {topk_ind.shape}")
+        # print(f"topk_ind values: {topk_ind}")
 
         mask = torch.zeros_like(metric_scores, dtype=torch.bool)
+        # print(f"\nMask creation:")
+        # print(f"initial mask shape: {mask.shape}")
+        
         mask.scatter_(
             dim=1,
             index=topk_ind,
             src=torch.ones_like(topk_ind, dtype=torch.bool),
         )
-        # print(f"topk_ind: {topk_ind}")
-        attn_output = mask.unsqueeze(dim=-1) * attn_output
+        # print(f"final mask shape: {mask.shape}")
+        
+        attn_output = mask.unsqueeze(dim=0) * attn_output
+        # print(f"final attn_output shape: {attn_output.shape}")
+
         if head_mask_recorder is not None:
             head_mask_recorder(topk_ind)
+    
     return attn_output
 
 
