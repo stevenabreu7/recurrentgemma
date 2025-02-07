@@ -15,7 +15,7 @@
 """Griffin and Hawk"s model components."""
 
 import math
-from typing import Literal, NamedTuple, overload
+from typing import Literal, NamedTuple, overload, List
 
 import einops
 from recurrentgemma import common
@@ -46,6 +46,14 @@ class AttentionRecorder(nn.Module):
         elif self.record == "last":
             self.data = x
         return x
+
+
+def manipulate_attention(
+    attn_weights, attn_output, heads: List, indexes: List, value: float
+):
+    for head in heads:
+        attn_output[..., 0, head, indexes[head]] = value
+    return attn_output
 
 
 def dejavu_intervention(
@@ -566,6 +574,13 @@ class LocalAttentionBlock(nn.Module):
                 head_mask_recorder=self.head_mask_recorder,
             )
             # print(f"did topk dejavu with k={self.topk_heads}")
+        if self.manipulated_heads is not None:
+            encoded = manipulate_attention(
+                encoded,
+                heads=self.manipulated_heads,
+                indexes=self.head_to_index,
+                value=self.attention_value,
+            )
         encoded = einops.rearrange(
             encoded, "... n h -> ... (n h)", n=self.num_heads
         )

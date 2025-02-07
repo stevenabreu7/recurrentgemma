@@ -13,7 +13,7 @@
 # limitations under the License.
 # ============================================================================
 """Griffin model."""
-from typing import Literal, overload, Dict, Optional, Tuple, Union
+from typing import Literal, overload, Dict, Optional, Tuple, Union, List
 
 # import logging
 
@@ -221,6 +221,36 @@ class Griffin(nn.Module):
         """disable attention head sparsification"""
         self.set_topk_heads()
         # print("disabled sparsification")
+
+    def enable_attention_manipulation(
+        self, heads: List, attention_value: float
+    ):
+        """enable attention head manipulation with specified list of heads & sequence indexes and attention value to set.
+        list of heads has to be in form [(layer, head, index), ...]
+        """
+        # self.config.manipulated_heads = heads
+        # self.config.attention_value = attention_value
+
+        for layer, head, index in heads:
+            block = self.blocks[layer]
+            if block.temporal_block_type == common.TemporalBlockType.ATTENTION:
+                if not block.manipulated_heads:
+                    block.manipulated_heads = list()
+                block.manipulated_heads.append(head)
+                if not block.head_to_index:
+                    block.head_to_index = [
+                        None for _ in range(self.model.num_attention_heads)
+                    ]
+                block.head_to_index[head] = index
+                block.attention_value = attention_value
+
+    def disable_attention_manipulation(self):
+        for layer in self.model.layers:
+            block = layer.temporal_block
+            if block.temporal_block_type == common.TemporalBlockType.ATTENTION:
+                block.manipulated_heads = None
+                block.head_to_index = None
+                block.attention_value = None
 
     def init_cache(
         self,
