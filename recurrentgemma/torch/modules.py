@@ -62,7 +62,7 @@ class AttentionRecorder(nn.Module):
 
 
 def increase_attention_on_needle(
-    masked_logits, topk_indices, needle_indices, scale_factor=1.0
+    masked_logits, topk_indices, needle_indices, scale_factor: float = 1.0
 ):
     if topk_indices is None:
         return masked_logits
@@ -466,6 +466,7 @@ class LocalAttentionBlock(nn.Module):
 
         # needle focus
         self.needle_indices = None
+        self.needle_scaling = None
 
         # Layers.
         self.proj_q = nn.Linear(
@@ -636,7 +637,10 @@ class LocalAttentionBlock(nn.Module):
             if self.needle_indices:
                 probs = nn.functional.softmax(
                     increase_attention_on_needle(
-                        masked_logits, topk, self.needle_indices
+                        masked_logits,
+                        topk,
+                        self.needle_indices,
+                        self.needle_scaling,
                     ),
                     dim=-1,
                 ).type_as(x)
