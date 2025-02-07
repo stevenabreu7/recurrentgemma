@@ -439,6 +439,7 @@ class LocalAttentionBlock(nn.Module):
         )
         self.attn_pattern_recorder = AttentionRecorder()
         self.head_mask_recorder = AttentionRecorder()
+        self.encoded_recorder = AttentionRecorder()
         # Initialization.
         self.reset_parameters()
         # for recorders
@@ -581,6 +582,7 @@ class LocalAttentionBlock(nn.Module):
                 indexes=self.head_to_index,
                 value=self.attention_value,
             )
+        self.encoded_recorder(encoded)
         encoded = einops.rearrange(
             encoded, "... n h -> ... (n h)", n=self.num_heads
         )
