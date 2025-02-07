@@ -138,14 +138,16 @@ def get_topk(
 
 
 def keep_topk(attn_output, topk: torch.Tensor):
-    mask = torch.zeros(1, 1, attn_output.shape[-2], 1, dtype=torch.bool).to('cuda')
+    mask = torch.zeros(1, 1, attn_output.shape[-2], 1, dtype=torch.bool).to(
+        "cuda"
+    )
     # print(f"\nMask creation:")
     topk = topk.reshape(
         1, 1 if len(topk.shape) == 1 else topk.shape[0], topk.shape[-1], 1
     )
 
-    print(f'topk device: {topk.device}')
-    print(f'mask device: {mask.device}')
+    print(f"topk device: {topk.device}")
+    print(f"mask device: {mask.device}")
 
     mask.scatter_(
         dim=2,
@@ -637,7 +639,7 @@ class LocalAttentionBlock(nn.Module):
                 metric=self.sparsity_metric,
                 do_prefill=self.sparsity_prefill,
                 head_mask_recorder=self.head_mask_recorder,
-            ).
+            )
             # print(f"did topk dejavu with k={self.topk_heads}")
             if self.needle_indices:
                 probs = nn.functional.softmax(
