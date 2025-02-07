@@ -140,7 +140,9 @@ def get_topk(
 def keep_topk(attn_output, topk: List):
     mask = torch.zeros(1, 1, attn_output.shape[-2], 1, dtype=torch.bool)
     # print(f"\nMask creation:")
-    topk = topk.reshape(1, 1, topk.shape[0], 1)
+    topk = topk.reshape(
+        1, 1 if len(topk.shape) == 1 else topk.shape[0], topk.shape[-1], 1
+    )
 
     mask.scatter_(
         dim=2,
