@@ -648,7 +648,7 @@ class LocalAttentionBlock(nn.Module):
         encoded = einops.einsum(probs, values, "b n t s, b s n h -> b t n h")
 
         if self.topk_heads:
-            encoded = keep_topk(encoded, topk, self.num_heads)
+            encoded = keep_topk(encoded, topk)
 
         # elif self.manipulated_heads is not None:
         #     # print("self.manipulated heads is not none")
