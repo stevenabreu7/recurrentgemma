@@ -144,19 +144,19 @@ def keep_topk(attn_output, topk: torch.Tensor):
         1,
         dtype=torch.bool,
     ).to("cuda")
-    print(f"mask shape {mask.shape}")
+    # print(f"mask shape {mask.shape}")
     # print(f"\nMask creation:")
     topk = topk.reshape(
         1 if len(topk.shape) == 1 else topk.shape[0], topk.shape[-1], 1
     )
-    print(f"topk shape {topk.shape}")
+    # print(f"topk shape {topk.shape}")
 
     mask.scatter_(
         dim=1,
         index=topk,
         src=torch.ones_like(mask, dtype=torch.bool),
     )
-    print(f"final mask shape: {mask.shape}")
+    # print(f"final mask shape: {mask.shape}")
 
     attn_output = mask.unsqueeze(dim=1) * attn_output
     return attn_output
@@ -641,9 +641,9 @@ class LocalAttentionBlock(nn.Module):
                 do_prefill=self.sparsity_prefill,
                 head_mask_recorder=self.head_mask_recorder,
             )
-            print(f"did topk dejavu with k={self.topk_heads}")
+            # print(f"did topk dejavu with k={self.topk_heads}")
             if self.needle_indices:
-                print("in needle_indices")
+                # print("in needle_indices")
                 probs = nn.functional.softmax(
                     increase_attention_on_needle(
                         masked_logits,
@@ -653,13 +653,13 @@ class LocalAttentionBlock(nn.Module):
                     ),
                     dim=-1,
                 ).type_as(x)
-                print("calculated probs")
+                # print("calculated probs")
 
         encoded = einops.einsum(probs, values, "b n t s, b s n h -> b t n h")
-        print(f"encoded shape after calculation {encoded.shape}")
+        # print(f"encoded shape after calculation {encoded.shape}")
         if self.topk_heads:
             encoded = keep_topk(encoded, topk)
-            print(f"encoded shape after dropping {encoded.shape}")
+            # print(f"encoded shape after dropping {encoded.shape}")
 
         # elif self.manipulated_heads is not None:
         #     # print("self.manipulated heads is not none")
@@ -675,7 +675,7 @@ class LocalAttentionBlock(nn.Module):
         encoded = einops.rearrange(
             encoded, "... n h -> ... (n h)", n=self.num_heads
         )
-        print(f"encoded shape after rearrange {encoded.shape}")
+        # print(f"encoded shape after rearrange {encoded.shape}")
 
         attn_output = self.proj_final(encoded)
 
