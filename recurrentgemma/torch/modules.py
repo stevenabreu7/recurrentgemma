@@ -49,8 +49,20 @@ class AttentionRecorder(nn.Module):
 
 
 def manipulate_attention(
-    attn_output, heads: List, indexes: List, value: float
+    attn_weights,
+    attn_output,
+    heads: List,
+    indexes: List,
+    value: float,
+    topk: List = None,
 ):
+    # act on attn_weights to increase needle, based on topk
+
+    # put softmax on attn_weights
+
+    # recalculate "encode"
+
+    # sparsify encode
     for head in heads:
         attn_output[..., 0, head, indexes[head]] = value
     return attn_output
@@ -589,25 +601,38 @@ class LocalAttentionBlock(nn.Module):
         masked_logits = masked_logits.type(torch.float32)
 
         probs = nn.functional.softmax(masked_logits, dim=-1).type_as(x)
-        encoded = einops.einsum(probs, values, "b n t s, b s n h -> b t n h")
+
         if self.topk_heads is not None:
-            encoded = dejavu_intervention(
+            topk = get_topk(
                 probs,
-                encoded,
                 k=self.topk_heads,
                 metric=self.sparsity_metric,
                 do_prefill=self.sparsity_prefill,
                 head_mask_recorder=self.head_mask_recorder,
             )
             # print(f"did topk dejavu with k={self.topk_heads}")
-        if self.manipulated_heads is not None:
-            # print("self.manipulated heads is not none")
-            encoded = manipulate_attention(
-                encoded,
-                heads=self.manipulated_heads,
-                indexes=self.head_to_index,
-                value=self.attention_value,
-            )
+            if self.needle_indices:
+                probs = nn.functional.softmax(
+                    increase_attention_on_needle(
+                        masked_logits, topk, self.needle_indices
+                    ),
+                    dim=-1,
+                ).type_as(x)
+
+        # elif self.manipulated_heads is not None:
+        #     # print("self.manipulated heads is not none")
+        #         encoded = manipulate_attention(
+        #             masked_logits,
+        #             values,
+        #             heads=self.manipulated_heads,
+        #             indexes=self.head_to_index,
+        #             value=self.attention_value,
+        #         )
+        encoded = einops.einsum(probs, values, "b n t s, b s n h -> b t n h")
+
+        if self.topk_heads is not None:
+            encoded = keep_topk(encoded, topk)
+
         self.encoded_recorder(encoded)
         encoded = einops.rearrange(
             encoded, "... n h -> ... (n h)", n=self.num_heads
