@@ -48,29 +48,21 @@ class AttentionRecorder(nn.Module):
         return x
 
 
-def manipulate_attention(
+# def manipulate_attention(
+#     attn_weights,
+#     attn_output,
+#     heads: List,
+#     indexes: List,
+#     value: float,
+#     topk: List = None,
+# ):
+#     for head in heads:
+#         attn_output[..., 0, head, indexes[head]] = value
+#     return attn_output
+
+
+def get_topk(
     attn_weights,
-    attn_output,
-    heads: List,
-    indexes: List,
-    value: float,
-    topk: List = None,
-):
-    # act on attn_weights to increase needle, based on topk
-
-    # put softmax on attn_weights
-
-    # recalculate "encode"
-
-    # sparsify encode
-    for head in heads:
-        attn_output[..., 0, head, indexes[head]] = value
-    return attn_output
-
-
-def dejavu_intervention(
-    attn_weights,
-    attn_output,
     k: int,
     metric="l2",
     do_prefill=False,
@@ -98,7 +90,7 @@ def dejavu_intervention(
     if do_prefill or out_len == 1:
         if k == 0:
             # print("k=0 case: returning zero tensor")
-            return attn_output * 0.0
+            return None
 
         if k > num_heads or k < 0:
             # print(f"Invalid k value: k={k}, num_heads={num_heads}")
@@ -106,32 +98,34 @@ def dejavu_intervention(
                 f"k ({k}) cannot exceed number of attention heads ({num_heads})"
             )
         metric_scores = metric_map[metric](attn_weights)
-        # print(f"\nMetric computation:")
-        # print(f"metric_scores shape: {metric_scores.shape}")
-        # print(f"metric_scores values: {metric_scores}")
 
+        # print(f"\nMetric computation:")
         _, topk_ind = metric_scores.topk(k, dim=1)
+
         # print(f"\nTop-k selection:")
         # print(f"topk_ind shape: {topk_ind.shape}")
         # print(f"topk_ind values: {topk_ind}")
 
-        mask = torch.zeros_like(metric_scores, dtype=torch.bool)
-        # print(f"\nMask creation:")
-        # print(f"initial mask shape: {mask.shape}")
-
-        mask.scatter_(
-            dim=1,
-            index=topk_ind,
-            src=torch.ones_like(topk_ind, dtype=torch.bool),
-        )
-        # print(f"final mask shape: {mask.shape}")
-
-        attn_output = mask.unsqueeze(dim=0) * attn_output
-        # print(f"final attn_output shape: {attn_output.shape}")
-
-        if head_mask_recorder is not None:
+        if head_mask_recorder:
             head_mask_recorder(topk_ind)
 
+        return topk_ind.squeeze()
+
+
+def keep_topk(attn_output, topk: List):
+    mask = torch.zeros(1, 1, attn_output.shape[-2], 1, dtype=torch.bool)
+    # print(f"\nMask creation:")
+    topk = topk.reshape(1, 1, topk.shape[0], 1)
+
+    mask.scatter_(
+        dim=2,
+        index=topk,
+        src=torch.ones_like(mask, dtype=torch.bool),
+    )
+    # print(f"final mask shape: {mask.shape}")
+
+    attn_output = mask * attn_output
+    # print(f"final attn_output shape: {attn_output.shape}")
     return attn_output
 
 
@@ -445,6 +439,9 @@ class LocalAttentionBlock(nn.Module):
         self.head_to_index = None
         self.attention_value = None
 
+        # needle focus
+        self.needle_indices = None
+
         # Layers.
         self.proj_q = nn.Linear(
             in_features=self.width,
@@ -602,7 +599,7 @@ class LocalAttentionBlock(nn.Module):
 
         probs = nn.functional.softmax(masked_logits, dim=-1).type_as(x)
 
-        if self.topk_heads is not None:
+        if self.topk_heads:
             topk = get_topk(
                 probs,
                 k=self.topk_heads,
@@ -619,6 +616,11 @@ class LocalAttentionBlock(nn.Module):
                     dim=-1,
                 ).type_as(x)
 
+        encoded = einops.einsum(probs, values, "b n t s, b s n h -> b t n h")
+
+        if self.topk_heads:
+            encoded = keep_topk(encoded, topk, self.num_heads)
+
         # elif self.manipulated_heads is not None:
         #     # print("self.manipulated heads is not none")
         #         encoded = manipulate_attention(
@@ -628,10 +630,6 @@ class LocalAttentionBlock(nn.Module):
         #             indexes=self.head_to_index,
         #             value=self.attention_value,
         #         )
-        encoded = einops.einsum(probs, values, "b n t s, b s n h -> b t n h")
-
-        if self.topk_heads is not None:
-            encoded = keep_topk(encoded, topk)
 
         self.encoded_recorder(encoded)
         encoded = einops.rearrange(

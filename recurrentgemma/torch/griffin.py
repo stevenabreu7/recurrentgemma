@@ -223,6 +223,21 @@ class Griffin(nn.Module):
         self.set_sparse_attributes()
         # print("disabled sparsification")
 
+    def set_needle_indices(self, needle_indices: List | None = None):
+        """sets needle index list on all slef-attention layers"""
+        for block in self.blocks:
+            if block.temporal_block_type == common.TemporalBlockType.ATTENTION:
+                block = block.attention_block
+                block.needle_indices = needle_indices
+
+    def enable_needle_focus(self, needle_indices: List):
+        """enables attention weight increase on all heads for specified tokens"""
+        self.set_needle_focus(needle_indices)
+
+    def disable_needle_focus(self):
+        """enables attention weight increase on all heads for specified tokens"""
+        self.set_needle_focus()
+
     def enable_attention_manipulation(
         self, heads: List, attention_value: float
     ):
