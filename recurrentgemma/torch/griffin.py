@@ -245,7 +245,7 @@ class Griffin(nn.Module):
                     ]
                 block.head_to_index[head] = index
                 block.attention_value = attention_value
-        print("enabled attention manipulation")
+        # print("enabled attention manipulation")
 
     def disable_attention_manipulation(self):
         for block in self.blocks:

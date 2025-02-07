@@ -601,7 +601,7 @@ class LocalAttentionBlock(nn.Module):
             )
             # print(f"did topk dejavu with k={self.topk_heads}")
         if self.manipulated_heads is not None:
-            print("self.manipulated heads is not none")
+            # print("self.manipulated heads is not none")
             encoded = manipulate_attention(
                 encoded,
                 heads=self.manipulated_heads,
