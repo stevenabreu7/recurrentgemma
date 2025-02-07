@@ -219,7 +219,7 @@ class Griffin(nn.Module):
 
     def disable_sparsification(self):
         """disable attention head sparsification"""
-        self.set_topk_heads()
+        self.set_sparse_attributes()
         # print("disabled sparsification")
 
     def enable_attention_manipulation(
