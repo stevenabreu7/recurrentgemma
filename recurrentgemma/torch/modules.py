@@ -158,7 +158,6 @@ def keep_topk(attn_output, topk: torch.Tensor):
     # print(f"final mask shape: {mask.shape}")
 
     attn_output = mask * attn_output
-    # print(f"final attn_output shape: {attn_output.shape}")
     return attn_output
 
 
@@ -641,8 +640,9 @@ class LocalAttentionBlock(nn.Module):
                 do_prefill=self.sparsity_prefill,
                 head_mask_recorder=self.head_mask_recorder,
             )
-            # print(f"did topk dejavu with k={self.topk_heads}")
+            print(f"did topk dejavu with k={self.topk_heads}")
             if self.needle_indices:
+                print("in needle_indices")
                 probs = nn.functional.softmax(
                     increase_attention_on_needle(
                         masked_logits,
@@ -652,11 +652,13 @@ class LocalAttentionBlock(nn.Module):
                     ),
                     dim=-1,
                 ).type_as(x)
+                print("calculated probs")
 
         encoded = einops.einsum(probs, values, "b n t s, b s n h -> b t n h")
-
+        print(f"encoded shape after calculation {encoded.shape}")
         if self.topk_heads:
             encoded = keep_topk(encoded, topk)
+            print(f"encoded shape after dropping {encoded.shape}")
 
         # elif self.manipulated_heads is not None:
         #     # print("self.manipulated heads is not none")
@@ -672,6 +674,8 @@ class LocalAttentionBlock(nn.Module):
         encoded = einops.rearrange(
             encoded, "... n h -> ... (n h)", n=self.num_heads
         )
+        print(f"encoded shape after rearrange {encoded.shape}")
+
         attn_output = self.proj_final(encoded)
 
         return attn_output, new_cache
