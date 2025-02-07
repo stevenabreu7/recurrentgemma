@@ -223,7 +223,7 @@ class Griffin(nn.Module):
         self.set_sparse_attributes()
         # print("disabled sparsification")
 
-    def set_needle_indices(
+    def set_needle_focus(
         self,
         needle_indices: List | None = None,
         needle_scaling: float | None = None,
