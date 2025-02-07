@@ -205,9 +205,10 @@ class Griffin(nn.Module):
         # update all attention layers
         for block in self.blocks:
             if block.temporal_block_type == common.TemporalBlockType.ATTENTION:
-                block.attention_block.topk_heads = k
-                block.attention_block.sparsity_metric = metric
-                block.attention_block.sparsity_prefill = prefill
+                block = block.attention_block
+                block.topk_heads = k
+                block.sparsity_metric = metric
+                block.sparsity_prefill = prefill
 
     def enable_sparsification(
         self, k: int = 2, metric="l2", prefill: bool = False
@@ -234,11 +235,12 @@ class Griffin(nn.Module):
         for layer, head, index in heads:
             block = self.blocks[layer]
             if block.temporal_block_type == common.TemporalBlockType.ATTENTION:
-                if not block.attention_block.manipulated_heads:
-                    block.attention_block.manipulated_heads = list()
-                block.attention_block.manipulated_heads.append(head)
-                if not block.attention_block.head_to_index:
-                    block.attention_block.head_to_index = [
+                block = block.attention_block
+                if not block.manipulated_heads:
+                    block.manipulated_heads = list()
+                block.manipulated_heads.append(head)
+                if not block.head_to_index:
+                    block.head_to_index = [
                         None for _ in range(self.config.num_heads)
                     ]
                 block.head_to_index[head] = index
