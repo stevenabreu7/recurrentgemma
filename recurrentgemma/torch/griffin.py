@@ -239,7 +239,7 @@ class Griffin(nn.Module):
                 block.manipulated_heads.append(head)
                 if not block.head_to_index:
                     block.head_to_index = [
-                        None for _ in range(self.model.num_attention_heads)
+                        None for _ in range(self.config.num_heads)
                     ]
                 block.head_to_index[head] = index
                 block.attention_value = attention_value

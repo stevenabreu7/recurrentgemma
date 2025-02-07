@@ -85,14 +85,14 @@ def dejavu_intervention(
 
     if do_prefill or out_len == 1:
         if k == 0:
-          # print("k=0 case: returning zero tensor")
-          return attn_output * 0.0
-    
+            # print("k=0 case: returning zero tensor")
+            return attn_output * 0.0
+
         if k > num_heads or k < 0:
-          # print(f"Invalid k value: k={k}, num_heads={num_heads}")
-          raise ValueError(
-            f"k ({k}) cannot exceed number of attention heads ({num_heads})"
-          )
+            # print(f"Invalid k value: k={k}, num_heads={num_heads}")
+            raise ValueError(
+                f"k ({k}) cannot exceed number of attention heads ({num_heads})"
+            )
         metric_scores = metric_map[metric](attn_weights)
         # print(f"\nMetric computation:")
         # print(f"metric_scores shape: {metric_scores.shape}")
@@ -106,20 +106,20 @@ def dejavu_intervention(
         mask = torch.zeros_like(metric_scores, dtype=torch.bool)
         # print(f"\nMask creation:")
         # print(f"initial mask shape: {mask.shape}")
-        
+
         mask.scatter_(
             dim=1,
             index=topk_ind,
             src=torch.ones_like(topk_ind, dtype=torch.bool),
         )
         # print(f"final mask shape: {mask.shape}")
-        
+
         attn_output = mask.unsqueeze(dim=0) * attn_output
         # print(f"final attn_output shape: {attn_output.shape}")
 
         if head_mask_recorder is not None:
             head_mask_recorder(topk_ind)
-    
+
     return attn_output
 
 
@@ -427,6 +427,11 @@ class LocalAttentionBlock(nn.Module):
         self.topk_heads = None
         self.sparsity_metric = None
         self.sparsity_prefill = None
+
+        # Attention intervention attributes
+        self.manipulated_heads = None
+        self.head_to_index = None
+        self.attention_value = None
 
         # Layers.
         self.proj_q = nn.Linear(
