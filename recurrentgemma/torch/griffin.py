@@ -250,6 +250,7 @@ class Griffin(nn.Module):
     def disable_attention_manipulation(self):
         for block in self.blocks:
             if block.temporal_block_type == common.TemporalBlockType.ATTENTION:
+                block = block.attention_block
                 block.manipulated_heads = None
                 block.head_to_index = None
                 block.attention_value = None
