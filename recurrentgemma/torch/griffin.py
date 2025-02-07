@@ -234,15 +234,16 @@ class Griffin(nn.Module):
         for layer, head, index in heads:
             block = self.blocks[layer]
             if block.temporal_block_type == common.TemporalBlockType.ATTENTION:
-                if not block.manipulated_heads:
-                    block.manipulated_heads = list()
-                block.manipulated_heads.append(head)
-                if not block.head_to_index:
-                    block.head_to_index = [
+                if not block.attention_block.manipulated_heads:
+                    block.attention_block.manipulated_heads = list()
+                block.attention_block.manipulated_heads.append(head)
+                if not block.attention_block.head_to_index:
+                    block.attention_block.head_to_index = [
                         None for _ in range(self.config.num_heads)
                     ]
                 block.head_to_index[head] = index
                 block.attention_value = attention_value
+        print("enabled attention manipulation")
 
     def disable_attention_manipulation(self):
         for block in self.blocks:
