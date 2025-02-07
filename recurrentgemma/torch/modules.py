@@ -66,7 +66,27 @@ def manipulate_attention(
     for head in heads:
         attn_output[..., 0, head, indexes[head]] = value
     return attn_output
+    
+def increase_attention_on_needle(masked_logits, topk_indices, needle_indices, scale_factor=1.0):
+    if topk_indices is None:
+        return masked_logits
 
+    modified_logits = masked_logits.clone()
+        
+    batch_size = masked_logits.shape[0]
+        
+    for batch_idx in range(batch_size):
+        for head_idx in topk_indices[batch_idx]:
+            max_attn = modified_logits[batch_idx, head_idx].max(dim=seq_len_dim).values
+            for q_idx in range(modified_logits.shape[-2]):
+                q_max = max_attn[q_idx]
+                for needle_idx in needle_indices:
+                    if needle_idx < modified_logits.shape[-1]:
+                        modified_logits[batch_idx, head_idx, query_idx, needle_idx] = query_max * scale_factor
+                    else:
+                        print("Invalid index, valid = [0, {modified_logits.shape[-1]-1}]")
+        
+        return modified_logits
 
 def dejavu_intervention(
     attn_weights,
