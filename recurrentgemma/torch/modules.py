@@ -647,7 +647,7 @@ class LocalAttentionBlock(nn.Module):
 
         if self.topk_heads:
             topk = None
-            if self.topk_heads >= self.num_heads:
+            if self.topk_heads < self.num_heads:
                 topk = get_topk(
                     probs,
                     k=self.topk_heads,
