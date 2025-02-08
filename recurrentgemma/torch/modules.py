@@ -660,7 +660,7 @@ class LocalAttentionBlock(nn.Module):
                     ),
                     dim=-1,
                 ).type_as(x)
-                print(probs)
+                print(probs.tolist())
 
         encoded = einops.einsum(probs, values, "b n t s, b s n h -> b t n h")
         # print(f"encoded shape after calculation {encoded.shape}")
