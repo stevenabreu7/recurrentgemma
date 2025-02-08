@@ -639,7 +639,8 @@ class LocalAttentionBlock(nn.Module):
         probs = nn.functional.softmax(masked_logits, dim=-1).type_as(x)
 
         if self.topk_heads:
-            if self.topk_heads < self.num_heads:
+            topk = None
+            if self.topk_heads >= self.num_heads:
                 topk = get_topk(
                     probs,
                     k=self.topk_heads,
