@@ -134,6 +134,8 @@ def get_topk(
         if head_mask_recorder:
             head_mask_recorder(topk_ind)
         print(f"topk_shape: {topk_ind.shape}")
+        print(f"attn_weights shape: {attn_weights.shape}")
+        print(topk_ind)
 
         return topk_ind.squeeze()
 
