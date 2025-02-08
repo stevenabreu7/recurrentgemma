@@ -668,6 +668,8 @@ class LocalAttentionBlock(nn.Module):
                     dim=-1,
                 ).type_as(x)
                 if probs.shape[-2] == 1:
+                    print(f"topk: {topk}")
+                    print(f"probs shape: {probs.shape}")
                     print(probs.tolist())
 
         encoded = einops.einsum(probs, values, "b n t s, b s n h -> b t n h")
