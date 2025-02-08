@@ -112,57 +112,56 @@ def get_topk(
     # print(f"out_len: {out_len}")
     # print(f"Condition check: do_prefill={do_prefill} or out_len==1: {out_len==1}")
 
-    if do_prefill or out_len == 1:
-        if k == 0:
-            # print("k=0 case: returning zero tensor")
-            return None
+    if not do_prefill or not out_len == 1:
+        k = 10  # deactivate sparsification
+    if k == 0:
+        # print("k=0 case: returning zero tensor")
+        return None
 
-        if k > num_heads or k < 0:
-            # print(f"Invalid k value: k={k}, num_heads={num_heads}")
-            raise ValueError(
-                f"k ({k}) cannot exceed number of attention heads ({num_heads})"
-            )
-        metric_scores = metric_map[metric](attn_weights)
+    if k > num_heads or k < 0:
+        # print(f"Invalid k value: k={k}, num_heads={num_heads}")
+        raise ValueError(
+            f"k ({k}) cannot exceed number of attention heads ({num_heads})"
+        )
+    metric_scores = metric_map[metric](attn_weights)
 
-        # print(f"\nMetric computation:")
-        _, topk_ind = metric_scores.topk(k, dim=1)
+    # print(f"\nMetric computation:")
+    _, topk_ind = metric_scores.topk(k, dim=1)
 
-        # print(f"\nTop-k selection:")
-        # print(f"topk_ind shape: {topk_ind.shape}")
-        # print(f"topk_ind values: {topk_ind}")
+    # print(f"\nTop-k selection:")
+    # print(f"topk_ind shape: {topk_ind.shape}")
+    # print(f"topk_ind values: {topk_ind}")
 
-        if head_mask_recorder:
-            head_mask_recorder(topk_ind)
-        print(f"topk_shape: {topk_ind.shape}")
-        print(f"attn_weights shape: {attn_weights.shape}")
-        print(topk_ind)
-
-        return topk_ind.squeeze()
+    if head_mask_recorder:
+        head_mask_recorder(topk_ind)
+    print(f"topk_shape: {topk_ind.shape}")
+    print(f"attn_weights shape: {attn_weights.shape}")
+    print(topk_ind)
+    return topk_ind.squeeze(dim=0)
 
 
 def keep_topk(attn_output, topk: torch.Tensor):
-    if not topk:
+    print(topk.shape)
+    if topk is None:
         print("topk is None, returning attn_out * 0")
         return attn_output * 0.0
     mask = torch.zeros(
-        1 if len(topk.shape) == 1 else topk.shape[0],
+        topk.shape[1],
         attn_output.shape[-2],
         1,
         dtype=torch.bool,
     ).to("cuda")
-    # print(f"mask shape {mask.shape}")
-    # print(f"\nMask creation:")
-    topk = topk.reshape(
-        1 if len(topk.shape) == 1 else topk.shape[0], topk.shape[-1], 1
-    )
-    # print(f"topk shape {topk.shape}")
+    print(f"mask shape {mask.shape}")
+
+    topk = topk.transpose(0, 1).unsqueeze(dim=-1)
+    print(f"topk reshape {topk.shape}")
 
     mask.scatter_(
         dim=1,
         index=topk,
         src=torch.ones_like(mask, dtype=torch.bool),
     )
-    # print(f"final mask shape: {mask.shape}")
+    print(f"final mask shape: {mask.shape}")
 
     attn_output = mask.unsqueeze(dim=1) * attn_output
     return attn_output
@@ -640,13 +639,14 @@ class LocalAttentionBlock(nn.Module):
         probs = nn.functional.softmax(masked_logits, dim=-1).type_as(x)
 
         if self.topk_heads:
-            topk = get_topk(
-                probs,
-                k=self.topk_heads,
-                metric=self.sparsity_metric,
-                do_prefill=self.sparsity_prefill,
-                head_mask_recorder=self.head_mask_recorder,
-            )
+            if self.topk_heads < self.num_heads:
+                topk = get_topk(
+                    probs,
+                    k=self.topk_heads,
+                    metric=self.sparsity_metric,
+                    do_prefill=self.sparsity_prefill,
+                    head_mask_recorder=self.head_mask_recorder,
+                )
             # print(f"did topk dejavu with k={self.topk_heads}")
             if self.needle_indices:
                 # print("in needle_indices")
@@ -664,7 +664,8 @@ class LocalAttentionBlock(nn.Module):
         encoded = einops.einsum(probs, values, "b n t s, b s n h -> b t n h")
         # print(f"encoded shape after calculation {encoded.shape}")
         if self.topk_heads:
-            encoded = keep_topk(encoded, topk)
+            if self.topk_heads < self.num_heads:
+                encoded = keep_topk(encoded, topk)
             # print(f"encoded shape after dropping {encoded.shape}")
 
         # elif self.manipulated_heads is not None:
