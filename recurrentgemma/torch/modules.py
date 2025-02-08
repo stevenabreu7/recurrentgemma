@@ -134,16 +134,16 @@ def get_topk(
 
     if head_mask_recorder:
         head_mask_recorder(topk_ind)
-    print(f"topk_shape: {topk_ind.shape}")
-    print(f"attn_weights shape: {attn_weights.shape}")
-    print(topk_ind)
+    # print(f"topk_shape: {topk_ind.shape}")
+    # print(f"attn_weights shape: {attn_weights.shape}")
+    # print(topk_ind)
     return topk_ind.squeeze(dim=0)
 
 
 def keep_topk(attn_output, topk: torch.Tensor):
-    print(topk.shape)
+    # print(topk.shape)
     if topk is None:
-        print("topk is None, returning attn_out * 0")
+        # print("topk is None, returning attn_out * 0")
         return attn_output * 0.0
     mask = torch.zeros(
         topk.shape[1],
@@ -151,17 +151,17 @@ def keep_topk(attn_output, topk: torch.Tensor):
         1,
         dtype=torch.bool,
     ).to("cuda")
-    print(f"mask shape {mask.shape}")
+    # print(f"mask shape {mask.shape}")
 
     topk = topk.transpose(0, 1).unsqueeze(dim=-1)
-    print(f"topk reshape {topk.shape}")
+    # print(f"topk reshape {topk.shape}")
 
     mask.scatter_(
         dim=1,
         index=topk,
         src=torch.ones_like(mask, dtype=torch.bool),
     )
-    print(f"final mask shape: {mask.shape}")
+    # print(f"final mask shape: {mask.shape}")
 
     attn_output = mask.unsqueeze(dim=1) * attn_output
     return attn_output
