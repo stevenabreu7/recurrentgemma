@@ -133,11 +133,15 @@ def get_topk(
 
         if head_mask_recorder:
             head_mask_recorder(topk_ind)
+        print(f"topk_shape: {topk_ind.shape}")
 
         return topk_ind.squeeze()
 
 
 def keep_topk(attn_output, topk: torch.Tensor):
+    if not topk:
+        print("topk is None, returning attn_out * 0")
+        return attn_output * 0.0
     mask = torch.zeros(
         1 if len(topk.shape) == 1 else topk.shape[0],
         attn_output.shape[-2],
