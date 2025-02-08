@@ -62,26 +62,33 @@ class AttentionRecorder(nn.Module):
 
 
 def increase_attention_on_needle(
-    masked_logits, topk_indices, needle_indices, scale_factor: float = 1.0
+    masked_logits,
+    topk_indices,
+    needle_indices,
+    scale_factor: float = 1.0,
+    prefill=False,
 ):
     if topk_indices is None:
         return masked_logits
 
     batch_size = masked_logits.shape[0]
-
-    for batch_idx in range(batch_size):
-        for head_idx in topk_indices[batch_idx]:
-            max_attn = masked_logits[batch_idx, head_idx].max(dim=-1).values
-            for outdim_idx in range(masked_logits.shape[-2]):
-                outdim_max = max_attn[outdim_idx]
-                for needle_idx in needle_indices:
-                    if needle_idx < masked_logits.shape[-1]:
-                        masked_logits[
-                            batch_idx, head_idx, outdim_idx, needle_idx
-                        ] = (outdim_max * scale_factor)
-                    else:
-                        # print("Needle out of attention context")
-                        ...
+    outdim_len = masked_logits.shape[-2]
+    if prefill or outdim_len == 1:
+        for batch_idx in range(batch_size):
+            for head_idx in topk_indices[batch_idx]:
+                max_attn = (
+                    masked_logits[batch_idx, head_idx].max(dim=-1).values
+                )
+                for outdim_idx in range(outdim_len):
+                    outdim_max = max_attn[outdim_idx]
+                    for needle_idx in needle_indices:
+                        if needle_idx < masked_logits.shape[-1]:
+                            masked_logits[
+                                batch_idx, head_idx, outdim_idx, needle_idx
+                            ] = (outdim_max * scale_factor)
+                        else:
+                            # print("Needle out of attention context")
+                            ...
 
     return masked_logits
 
@@ -660,7 +667,8 @@ class LocalAttentionBlock(nn.Module):
                     ),
                     dim=-1,
                 ).type_as(x)
-                print(probs.tolist())
+                if probs.shape[-2] == 1:
+                    print(probs.tolist())
 
         encoded = einops.einsum(probs, values, "b n t s, b s n h -> b t n h")
         # print(f"encoded shape after calculation {encoded.shape}")
