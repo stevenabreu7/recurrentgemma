@@ -1,3 +1,5 @@
+** This RG implementation has been modified to enable attention head sparsity for self-attention layers**
+
 # RecurrentGemma
 
 RecurrentGemma is a family of open-weights Language Models by [Google DeepMind](https://deepmind.google/), based on the novel [Griffin architecture](https://arxiv.org/abs/2402.19427). This architecture achieves fast inference when generating long sequences by replacing global attention with a mixture of local attention and linear recurrences.
