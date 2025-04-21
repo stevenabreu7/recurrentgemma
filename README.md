@@ -1,4 +1,4 @@
-** This RG implementation has been modified to enable attention head sparsity for self-attention layers**
+**This RG implementation has been modified to enable attention head sparsity for self-attention layers**
 
 # RecurrentGemma
 
