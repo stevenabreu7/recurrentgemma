@@ -13,18 +13,17 @@
 # limitations under the License.
 # ============================================================================
 """Griffin model."""
-from typing import Literal, overload, Dict, Optional, Tuple, Union, List
 
-# import logging
+from typing import List, Literal, Optional, overload
 
-
-from recurrentgemma import common
-from recurrentgemma.torch import array_typing as at
-from recurrentgemma.torch import layers
-from recurrentgemma.torch import modules
 import torch
 from torch import nn
 from torch.utils import checkpoint
+
+# import logging
+from recurrentgemma import common
+from recurrentgemma.torch import array_typing as at
+from recurrentgemma.torch import layers, modules
 
 
 # logger = logging.getlogger(__name__)
@@ -41,7 +40,7 @@ class Griffin(nn.Module):
         device: str | torch.device | None = None,
         dtype: torch.dtype | None = None,
     ):
-        """Initializes the Griffin model.
+        """Initialize the Griffin model.
 
         Args:
           config: The Griffin config.
@@ -50,6 +49,7 @@ class Griffin(nn.Module):
           device: On what device to initialize parameters. Needed to allow for
             initializing the module without parameter initialzation.
           dtype: What dtype to use for initialziation.
+
         """
         super().__init__()
         self.config = config
@@ -79,9 +79,7 @@ class Griffin(nn.Module):
                 for block_type in self.config.block_types
             ]
         )
-        self.final_norm = layers.RMSNorm(
-            width=self.config.width, device=device, dtype=dtype
-        )
+        self.final_norm = layers.RMSNorm(width=self.config.width, device=device, dtype=dtype)
 
     def reset_parameters(self) -> None:
         """Resets the parameters of the module."""
@@ -139,7 +137,7 @@ class Griffin(nn.Module):
         return_logits: bool = True,
         return_cache: bool = True,
     ) -> tuple[at.TokenLogits | None, Cache | None]:
-        """Calls Griffin.
+        """Call Griffin.
 
         Args:
           tokens: Sequence of input tokens.
@@ -152,6 +150,7 @@ class Griffin(nn.Module):
           Output of the model together with the updated cache. If `cache` is None
           than the returned updated cache is empty initialized and filled in from
           the input sequence.
+
         """
         if not return_logits and not return_cache:
             return None, None
@@ -197,11 +196,6 @@ class Griffin(nn.Module):
         metric: Optional[str] = None,
         prefill: Optional[bool] = False,
     ):
-        # update config, disables if no arguments passed
-        # self.config.topk_heads = k
-        # self.config.sparsity_metric = metric
-        # self.config.sparsity_prefill = prefill
-
         # update all attention layers
         for block in self.blocks:
             if block.temporal_block_type == common.TemporalBlockType.ATTENTION:
@@ -210,25 +204,24 @@ class Griffin(nn.Module):
                 block.sparsity_metric = metric
                 block.sparsity_prefill = prefill
 
-    def enable_sparsification(
-        self, k: int = 2, metric="l2", prefill: bool = False
-    ):
-        """enable attention head sparsification with specified k value, norm,
-        and if it should be applied during prefill"""
+    def enable_sparsification(self, k: int = 2, metric="l2", prefill: bool = False):
+        """Enable attention head sparsification.
+
+        Specify k value, norm, and if it should be applied during prefill.
+        """
         self.set_sparse_attributes(k, metric, prefill)
-        # print(f"enabled sparsification with {k=}, {metric=}, {prefill=}")
 
     def disable_sparsification(self):
-        """disable attention head sparsification"""
+        """Disable attention head sparsification."""
         self.set_sparse_attributes()
-        # print("disabled sparsification")
+        print("disabled sparsification")
 
     def set_needle_focus(
         self,
         needle_indices: List | None = None,
         needle_scaling: float | None = None,
     ):
-        """sets needle index list on all slef-attention layers"""
+        """Set needle index list on all slef-attention layers."""
         for block in self.blocks:
             if block.temporal_block_type == common.TemporalBlockType.ATTENTION:
                 block = block.attention_block
@@ -236,18 +229,17 @@ class Griffin(nn.Module):
                 block.needle_scaling = needle_scaling
 
     def enable_needle_focus(self, needle_indices: List, scaling: float = 1.0):
-        """enables attention weight increase on all heads for specified tokens"""
+        """Enable attention weight increase on all heads for specified tokens."""
         self.set_needle_focus(needle_indices, scaling)
 
     def disable_needle_focus(self):
-        """enables attention weight increase on all heads for specified tokens"""
+        """Enable attention weight increase on all heads for specified tokens."""
         self.set_needle_focus()
 
-    def enable_attention_manipulation(
-        self, heads: List, attention_value: float
-    ):
-        """enable attention head manipulation with specified list of heads & sequence indexes and attention value to set.
-        list of heads has to be in form [(layer, head, index), ...]
+    def enable_attention_manipulation(self, heads: List, attention_value: float):
+        """Enable attention head manipulation with specified list of heads & sequence indexes and attention value to set.
+
+        List of heads has to be in form [(layer, head, index), ...]
         """
         # self.config.manipulated_heads = heads
         # self.config.attention_value = attention_value
@@ -260,9 +252,7 @@ class Griffin(nn.Module):
                     block.manipulated_heads = list()
                 block.manipulated_heads.append(head)
                 if not block.head_to_index:
-                    block.head_to_index = [
-                        None for _ in range(self.config.num_heads)
-                    ]
+                    block.head_to_index = [None for _ in range(self.config.num_heads)]
                 block.head_to_index[head] = index
                 block.attention_value = attention_value
         # print("enabled attention manipulation")
@@ -280,7 +270,7 @@ class Griffin(nn.Module):
         batch_size: int,
         dtype: torch.dtype,
     ) -> Cache:
-        """Initializes an empty cache for the model."""
+        """Initialize an empty cache for the model."""
         cache = {}
         for i, block_type in enumerate(self.config.block_types):
             cache[f"blocks.{i}"] = modules.ResidualBlock.init_cache(
