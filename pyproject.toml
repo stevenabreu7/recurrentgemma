@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "recurrentgemma"
 version = "0.1.0"
-description = "Open weights large language model (LLM) from Google DeepMind."
+description = "Open weights large language model (LLM) from Google DeepMind. Modified to support attention head sparsification."
 authors = [
   "Alex Botev <botev@google.com>",
   "Anushan Fernando <anushanf@google.com>",
@@ -10,8 +10,11 @@ authors = [
   "Ruba Haroun <rharoun@google.com>",
   "Samuel L. Smith <slsmith@google.com>",
   "Soham De <sohamde@google.com>",
+  "Steven Abreu",
+  "Davide Zani",
+  "Felix Michalak",
 ]
-repository = "https://github.com/google-deepmind/recurrentgemma"
+repository = "https://github.com/stevenabreu7/recurrentgemma/tree/dejavu"
 license = "Apache-2.0"
 readme = "README.md"
 
